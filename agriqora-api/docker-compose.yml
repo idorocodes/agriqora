@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: agriqora
+      POSTGRES_PASSWORD: agriqora
+      POSTGRES_DB: agriqora
+    ports:
+      - "5432:5432"
+    volumes:
+      - agriqora_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agriqora -d agriqora"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  agriqora_pgdata:

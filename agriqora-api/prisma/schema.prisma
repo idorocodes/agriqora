@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model User {
+  id String @id
+  name String @default("")
+  phone String @unique
+  role String
+  verified Boolean @default(false)
+  data Json
+  passwordHash String?
+  authVersion Int @default(0)
+  createdAt DateTime @default(now())
+  @@index([role, verified])
+}
+model Produce {
+  id String @id
+  batchId String @unique
+  category String
+  status String
+  title String
+  location String
+  createdAt DateTime
+  data Json
+  @@index([category])
+  @@index([status])
+  @@index([category, status])
+  @@index([createdAt])
+  @@index([location])
+}
+model ProduceAnchor {
+  produceId String @id
+  batchRef String @unique
+  commitment String
+  salt String
+  snapshot Json
+  authorityWallet String
+  revision Int @default(0)
+  status String @default("pending")
+  txSignature String?
+  anchorAddress String?
+  cluster String @default("devnet")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status])
+}
+model BuyerRequest {
+  id String @id
+  produceId String
+  status String
+  createdAt DateTime
+  data Json
+  @@index([produceId])
+  @@index([status])
+}
+model LedgerBlock {
+  id String @id
+  blockNumber Int @unique
+  batchId String
+  hash String @unique
+  previousHash String?
+  kind String
+  originalBatchId String?
+  createdAt DateTime @default(now())
+  data Json
+  @@index([batchId, blockNumber])
+  @@index([kind, blockNumber])
+}
+model LedgerState {
+  id Int @id
+  nextBlockNumber Int
+  lastHash String?
+}
+model FarmRecord {
+  id String @id
+  farmerName String
+  batchId String?
+  createdAt DateTime @default(now())
+  data Json
+  @@index([farmerName])
+  @@index([batchId])
+}
+model CommunityPost {
+  id String @id
+  createdAt DateTime @default(now())
+  data Json
+}
+model Notification {
+  id String @id
+  userRole String
+  createdAt DateTime @default(now())
+  data Json
+  @@index([userRole, createdAt])
+}
+model LearningModule {
+  id String @id
+  crop String
+  data Json
+  @@index([crop])
+}
+
+model OtpChallenge {
+  id String @id
+  phone String
+  codeHash String
+  expiresAt DateTime
+  attempts Int @default(0)
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([phone, expiresAt])
+}
+model AuthSession {
+  id String @id
+  userId String
+  refreshTokenHash String @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  createdAt DateTime @default(now())
+  @@index([userId, expiresAt])
+}

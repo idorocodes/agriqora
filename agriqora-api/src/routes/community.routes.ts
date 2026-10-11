@@ -1,0 +1,5 @@
+import {Router} from "express";import {repository} from "../data/store.js";import {generateId} from "../utils/hash.js";import {isNonEmptyString,optionalString} from "../utils/validate.js";
+const router=Router();
+router.get("/",async(_req,res,next)=>{try{res.json({success:true,data:await repository.community.all()});}catch(e){next(e);}});
+router.post("/",async(req,res,next)=>{try{const b=req.body??{};if(!isNonEmptyString(b.title)||!isNonEmptyString(b.content)){res.status(400).json({success:false,error:"Title and content required"});return;}const actor=await repository.users.find(req.authUser!.id);if(!actor){res.status(401).json({success:false,error:"Admin account not found"});return;}const p:any={id:generateId("comm"),title:b.title.trim(),category:optionalString(b.category)??"Announcement",author:actor.name,date:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),location:optionalString(b.location)??"Regional Produce Hub",content:b.content.trim(),actionText:"Community Discussion"};await repository.community.create(p);res.status(201).json({success:true,data:p});}catch(e){next(e);}});
+export default router;
