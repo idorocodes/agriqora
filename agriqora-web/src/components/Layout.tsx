@@ -224,12 +224,6 @@ function Footer() {
             </li>
           </ul>
         </div>
-        <div>
-          <h2 className="text-base font-medium">Location</h2>
-          <p className="mt-3 text-sm leading-relaxed text-footer-text">
-            Suleja and nearby farming communities, Niger State.
-          </p>
-        </div>
       </div>
     </footer>
   );
