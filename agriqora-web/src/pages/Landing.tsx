@@ -67,8 +67,8 @@ export default function LandingPage() {
                 <p>market listings</p>
               </div>
               <div>
-                <p className="font-display text-2xl text-forest">3</p>
-                <p>core user roles</p>
+                <p className="font-display text-2xl text-forest">100%</p>
+                <p>safe</p>
               </div>
               <div>
                 <p className="font-display text-2xl text-forest">100%</p>
@@ -77,63 +77,14 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="card overflow-hidden border border-line bg-card p-5 shadow-[0_12px_30px_rgba(13,74,25,0.08)]">
-            <div className="rounded-xl border border-line bg-sand p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-forest text-white">
-                    <Leaf className="h-5 w-5" aria-hidden />
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold text-ink">Marketplace snapshot</p>
-                    <p className="text-xs text-muted">Fresh produce, verified records</p>
-                  </div>
-                </div>
-                <span className="rounded-full bg-forest-soft px-2.5 py-1 text-xs font-semibold text-forest">
-                  Trusted
-                </span>
-              </div>
-
-              <div className="mt-6 space-y-4">
-                <div className="rounded-lg border border-line bg-card p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-ink">Fresh yam tubers</p>
-                      <p className="text-sm text-muted">Maje Farms • Suleja</p>
-                    </div>
-                    <span className="rounded-full bg-forest-soft px-2 py-1 text-xs font-semibold text-forest">Verified</span>
-                  </div>
-                  <div className="mt-3 flex justify-between text-sm text-muted">
-                    <span>₦18,000</span>
-                    <span>120 bags</span>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-line bg-card p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-ink">Maize harvest</p>
-                      <p className="text-sm text-muted">Keffi Valley • Nasarawa</p>
-                    </div>
-                    <span className="rounded-full bg-pill px-2 py-1 text-xs font-semibold text-ink">Traceable</span>
-                  </div>
-                  <div className="mt-3 flex justify-between text-sm text-muted">
-                    <span>₦12,500</span>
-                    <span>80 sacks</span>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-dashed border-forest/30 bg-forest-soft p-4">
-                  <div className="flex items-center gap-3">
-                    <ShieldCheck className="h-5 w-5 text-forest" aria-hidden />
-                    <div>
-                      <p className="text-sm font-semibold text-forest">Batch verification</p>
-                      <p className="text-xs text-forest/80">Record anchored with cryptographic evidence</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="relative overflow-hidden rounded-[26px] border border-line bg-card shadow-[0_18px_40px_rgba(13,74,25,0.12)]">
+            <img
+             src="https://i.ibb.co/DHQLkxXZ/904428b1e7c15a13161c912c221f4383.jpg" 
+              alt="Portrait of a real farmer"
+              className="h-130 w-full object-cover object-center"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-forest/75 via-forest/10 to-transparent" />
+           
           </div>
         </div>
       </section>

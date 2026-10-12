@@ -86,7 +86,7 @@ function Navbar() {
   const dash = user ? dashboardPath(user.role) : '/signin';
 
   return (
-    <header className="sticky top-0  border-b border-line bg-cream/95 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-line bg-cream/95 backdrop-blur">
       <div className="wrap-nav flex h-18 items-center justify-between gap-4">
         <Link to="/" aria-label="AgriQora home" className="rounded-md">
           <Logo />
@@ -274,7 +274,7 @@ export function Layout() {
       </a>
       <ScrollToTop />
       <Navbar />
-      <main id="content" className="flex-1">
+      <main id="content" className="relative z-0 flex-1">
         <Outlet />
       </main>
       <Footer />
