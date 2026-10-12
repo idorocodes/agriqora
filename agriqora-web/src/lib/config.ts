@@ -4,4 +4,4 @@
  * Empty string = same origin, which is what the Vite dev/preview proxy uses.
  * Set API_URL at build time to point at a deployed server.
  */
-export const API_URL: string = (import.meta.env.API_URL ?? '').replace(/\/+$/, '');
+export const API_URL: string ="https://agriqora-server.onrender.com"
