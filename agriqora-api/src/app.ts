@@ -11,7 +11,7 @@ export function createApp() {
   const allowedOrigins = config.corsOrigin
     ? config.corsOrigin.split(",").map((x) => x.trim())
     : ["https://agriqora-web.vercel.app"]
-
+  
   app.use(
     cors({
       origin: allowedOrigins,
