@@ -1,4 +1,4 @@
-import { ArrowRight, BarChart3, Leaf, ShieldCheck, ShoppingBag, Sprout, Users } from 'lucide-react';
+import { ArrowRight, BarChart3, ShieldCheck, ShoppingBag, Sprout, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTitle } from '../lib/useTitle';
 
