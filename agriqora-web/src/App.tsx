@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom';
 import { RequireRole } from './components/RequireRole';
 import { Layout } from './components/Layout';
 import { Spinner } from './components/ui';
+import LandingPage from './pages/Landing';
 import Marketplace from './pages/Marketplace';
 import { NotFound } from './pages/Placeholder';
 
@@ -28,7 +29,8 @@ export default function App() {
     >
       <Routes>
         <Route element={<Layout />}>
-          <Route index element={<Marketplace />} />
+          <Route index element={<LandingPage />} />
+          <Route path="marketplace" element={<Marketplace />} />
           <Route path="produce/:id" element={<ProduceDetail />} />
           <Route path="trace" element={<Trace />} />
           <Route path="trace/:batchId" element={<Trace />} />

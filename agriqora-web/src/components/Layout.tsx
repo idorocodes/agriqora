@@ -21,7 +21,7 @@ export function Logo({ light = false }: { light?: boolean }) {
 }
 
 const NAV_LINKS = [
-  { to: '/', label: 'Marketplace' },
+  { to: '/marketplace', label: 'Marketplace' },
   { to: '/learn', label: 'Learn' },
   { to: '/trace', label: 'Trace produce' },
 ];
@@ -78,7 +78,7 @@ function Navbar() {
   }, [open]);
 
   const isActive = (to: string) =>
-    to === '/' ? pathname === '/' || pathname.startsWith('/produce') : pathname.startsWith(to);
+    to === '/marketplace' ? pathname === '/marketplace' || pathname.startsWith('/produce') : pathname.startsWith(to);
 
   const linkClass = (to: string) =>
     `text-[15px] font-medium transition-colors ${isActive(to) ? 'text-forest' : 'text-muted hover:text-forest'}`;
