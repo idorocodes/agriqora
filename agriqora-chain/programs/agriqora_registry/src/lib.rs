@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-// Replace the placeholder with the public key generated for this program before deployment.
+
 declare_id!("HfnLEJnmphpMcuUALQAYNfTeybGSbQKCQmFPhTCLNDJA");
 
 const CONFIG_SEED: &[u8] = b"config";
@@ -41,7 +41,7 @@ pub mod agriqora_registry {
         let now = Clock::get()?.unix_timestamp;
         let batch = &mut ctx.accounts.batch;
         batch.batch_ref = batch_ref;
-        batch.authority = ctx.accounts.farmer.key();
+        batch.authority = ctx.accounts.admin.key();
         batch.latest_revision = 0;
         batch.latest_commitment = commitment;
         batch.created_at = now;
@@ -51,13 +51,13 @@ pub mod agriqora_registry {
         revision.revision = 0;
         revision.commitment = commitment;
         revision.previous_commitment = [0; 32];
-        revision.authority = ctx.accounts.farmer.key();
+        revision.authority = ctx.accounts.admin.key();
         revision.created_at = now;
 
         emit!(BatchRegistered {
             batch_ref,
             commitment,
-            farmer: ctx.accounts.farmer.key(),
+            registrar: ctx.accounts.admin.key(),
             revision: 0,
             slot: Clock::get()?.slot,
         });
@@ -150,9 +150,11 @@ pub struct RotateAdmin<'info> {
 #[derive(Accounts)]
 #[instruction(batch_ref: [u8; 32], _commitment: [u8; 32])]
 pub struct RegisterBatch<'info> {
+    #[account(seeds = [CONFIG_SEED], bump, has_one = admin @ RegistryError::InvalidAuthority)]
+    pub config: Account<'info, RegistryConfig>,
     #[account(
         init,
-        payer = farmer,
+        payer = admin,
         space = 8 + BatchAnchor::INIT_SPACE,
         seeds = [BATCH_SEED, batch_ref.as_ref()],
         bump
@@ -160,14 +162,14 @@ pub struct RegisterBatch<'info> {
     pub batch: Account<'info, BatchAnchor>,
     #[account(
         init,
-        payer = farmer,
+        payer = admin,
         space = 8 + BatchRevision::INIT_SPACE,
         seeds = [REVISION_SEED, batch_ref.as_ref(), &0_u64.to_le_bytes()],
         bump
     )]
     pub revision: Account<'info, BatchRevision>,
     #[account(mut)]
-    pub farmer: Signer<'info>,
+    pub admin: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -237,7 +239,7 @@ pub struct AdminRotated {
 pub struct BatchRegistered {
     pub batch_ref: [u8; 32],
     pub commitment: [u8; 32],
-    pub farmer: Pubkey,
+    pub registrar: Pubkey,
     pub revision: u64,
     pub slot: u64,
 }

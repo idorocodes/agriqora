@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
-import { Connection, PublicKey } from "@solana/web3.js";
-import bs58 from "bs58";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { Connection, Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction, TransactionMessage, VersionedTransaction, sendAndConfirmTransaction } from "@solana/web3.js";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../data/prisma.js";
 
@@ -12,6 +13,10 @@ const REGISTER_BATCH_DISCRIMINATOR = createHash("sha256")
   .subarray(0, 8);
 const BATCH_ACCOUNT_DISCRIMINATOR = createHash("sha256")
   .update("account:BatchAnchor")
+  .digest()
+  .subarray(0, 8);
+const INITIALIZE_CONFIG_DISCRIMINATOR = createHash("sha256")
+  .update("global:initialize_config")
   .digest()
   .subarray(0, 8);
 
@@ -52,6 +57,49 @@ function programId(): PublicKey {
 
 function connection(): Connection {
   return new Connection(DEVNET_RPC, { commitment: "confirmed" });
+}
+
+function serverAuthority(): Keypair {
+  const raw = process.env.SOLANA_AUTHORITY_KEYPAIR?.trim();
+  try {
+    const keypairPath = process.env.SOLANA_AUTHORITY_KEYPAIR_PATH?.trim();
+    const secret = keypairPath
+      ? JSON.parse(readFileSync(resolve(keypairPath), "utf8"))
+      : raw ? JSON.parse(raw) : null;
+    if (!secret) throw new Error("No server authority configured");
+    if (!Array.isArray(secret) || secret.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 255)) {
+      throw new Error("Invalid keypair bytes");
+    }
+    return Keypair.fromSecretKey(Uint8Array.from(secret));
+  } catch {
+    throw Object.assign(new Error("Configure SOLANA_AUTHORITY_KEYPAIR_PATH or SOLANA_AUTHORITY_KEYPAIR in the API environment"), { status: 503 });
+  }
+}
+
+function deriveConfigAddress(id: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync([Buffer.from("config")], id)[0];
+}
+
+async function ensureRegistryConfig(rpc: Connection, id: PublicKey, authority: Keypair): Promise<void> {
+  const configAddress = deriveConfigAddress(id);
+  if (await rpc.getAccountInfo(configAddress, "confirmed")) return;
+  const instruction = new TransactionInstruction({
+    programId: id,
+    keys: [
+      { pubkey: configAddress, isSigner: false, isWritable: true },
+      { pubkey: authority.publicKey, isSigner: true, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data: INITIALIZE_CONFIG_DISCRIMINATOR,
+  });
+  try {
+    await sendAndConfirmTransaction(rpc, new Transaction().add(instruction), [authority], {
+      commitment: "confirmed",
+      preflightCommitment: "confirmed",
+    });
+  } catch (error) {
+    if (!(await rpc.getAccountInfo(configAddress, "confirmed"))) throw error;
+  }
 }
 
 export function makeProduceSnapshot(produce: Record<string, any>): ProduceRecordSnapshot {
@@ -100,8 +148,8 @@ export function deriveBatchAnchorAddress(batchRefHex: string): PublicKey {
   return address;
 }
 
-export async function prepareProduceAnchor(produceId: string, walletAddress: string) {
-  const authority = new PublicKey(walletAddress);
+export async function prepareProduceAnchor(produceId: string) {
+  const authority = serverAuthority();
   const produce = await prisma.produce.findUnique({ where: { id: produceId } });
   if (!produce) throw Object.assign(new Error("Produce listing not found"), { status: 404 });
 
@@ -118,18 +166,31 @@ export async function prepareProduceAnchor(produceId: string, walletAddress: str
     throw error;
   }
   if (existing) {
-    if (existing.authorityWallet !== authority.toBase58()) {
-      throw Object.assign(new Error("This batch is already assigned to another wallet"), { status: 409 });
+    if (existing.status === "confirmed") {
+      const verification = await verifyProduceAnchor(produceId);
+      if (!verification.verified) throw Object.assign(new Error("The saved Solana anchor no longer matches this produce record"), { status: 409 });
+      return { ...publicAnchor(existing), verified: true, programId: programId().toBase58() };
     }
-    return {
-      batchRef: existing.batchRef,
-      commitment: existing.commitment,
-      anchorAddress: existing.anchorAddress ?? anchorAddress,
-      authorityWallet: existing.authorityWallet,
-      status: existing.status,
-      cluster: existing.cluster,
-      txSignature: existing.txSignature,
-    };
+    if (existing.status === "pending" && existing.anchorAddress !== anchorAddress) {
+      const refreshed = await prisma.produceAnchor.update({
+        where: { produceId },
+        data: { anchorAddress, cluster: CLUSTER },
+      });
+      return {
+        batchRef: refreshed.batchRef,
+        commitment: refreshed.commitment,
+        anchorAddress,
+        authorityWallet: authority.publicKey.toBase58(),
+        status: refreshed.status,
+        cluster: refreshed.cluster,
+        txSignature: refreshed.txSignature,
+        programId: programId().toBase58(),
+      };
+    }
+    const updated = existing.authorityWallet === authority.publicKey.toBase58()
+      ? existing
+      : await prisma.produceAnchor.update({ where: { produceId }, data: { authorityWallet: authority.publicKey.toBase58(), anchorAddress, cluster: CLUSTER } });
+    return { ...publicAnchor(updated), programId: programId().toBase58() };
   }
 
   const snapshot = makeProduceSnapshot(produce.data as Record<string, any>);
@@ -142,94 +203,122 @@ export async function prepareProduceAnchor(produceId: string, walletAddress: str
       commitment,
       salt,
       snapshot: JSON.parse(JSON.stringify(snapshot)),
-      authorityWallet: authority.toBase58(),
+      authorityWallet: authority.publicKey.toBase58(),
       anchorAddress,
       cluster: CLUSTER,
       status: "pending",
     },
   });
-  return {
-    batchRef: saved.batchRef,
-    commitment: saved.commitment,
-    anchorAddress: saved.anchorAddress,
-    authorityWallet: saved.authorityWallet,
-    status: saved.status,
-    cluster: saved.cluster,
-    txSignature: saved.txSignature,
-  };
+  return { ...publicAnchor(saved), programId: programId().toBase58() };
 }
 
-export async function confirmProduceAnchor(produceId: string, signature: string) {
-  const anchor = await prisma.produceAnchor.findUnique({ where: { produceId } });
-  if (!anchor) throw Object.assign(new Error("Anchor preparation not found"), { status: 404 });
-  const rpc = connection();
+export async function submitProduceAnchor(produceId: string) {
+  const authority = serverAuthority();
+  const prepared = await prepareProduceAnchor(produceId);
+  if (prepared.status === "confirmed") return prepared;
+  const anchorRecord = await prisma.produceAnchor.findUnique({ where: { produceId } });
+  if (!anchorRecord) throw Object.assign(new Error("Anchor preparation disappeared before submission"), { status: 409 });
   const id = programId();
-  const expectedAddress = deriveBatchAnchorAddress(anchor.batchRef);
-  if (anchor.anchorAddress !== expectedAddress.toBase58()) {
-    throw Object.assign(new Error("Prepared batch address is invalid"), { status: 400 });
-  }
-
-  const transaction = await rpc.getParsedTransaction(signature, {
-    commitment: "confirmed",
-    maxSupportedTransactionVersion: 0,
+  const rpc = connection();
+  const claimed = await prisma.produceAnchor.updateMany({
+    where: { produceId, status: "pending" },
+    data: { status: "submitting" },
   });
-  if (!transaction || transaction.meta?.err) {
-    throw Object.assign(new Error("Solana transaction is not confirmed successfully"), { status: 409 });
-  }
-  const authority = new PublicKey(anchor.authorityWallet);
-  const instruction = transaction.transaction.message.instructions.find((ix) =>
-    ix.programId.equals(id) && "data" in ix && "accounts" in ix,
-  );
-  if (!instruction || !("data" in instruction) || !("accounts" in instruction)) {
-    throw Object.assign(new Error("Transaction does not contain the AgriQora registration instruction"), { status: 400 });
-  }
-  const instructionData = Buffer.from(bs58.decode(instruction.data));
-  const batchRef = Buffer.from(anchor.batchRef, "hex");
-  const commitment = Buffer.from(anchor.commitment, "hex");
-  const instructionAccounts = instruction.accounts as PublicKey[];
-  const authoritySigned = transaction.transaction.message.accountKeys.some(
-    (key) => key.pubkey.equals(authority) && key.signer,
-  );
-  if (
-    !authoritySigned ||
-    !instructionAccounts.some((key) => key.equals(authority)) ||
-    !instructionAccounts.some((key) => key.equals(expectedAddress)) ||
-    !instructionData.subarray(0, 8).equals(REGISTER_BATCH_DISCRIMINATOR) ||
-    !instructionData.subarray(8, 40).equals(batchRef) ||
-    !instructionData.subarray(40, 72).equals(commitment)
-  ) {
-    throw Object.assign(new Error("Confirmed transaction does not match the prepared batch commitment"), { status: 400 });
+  if (claimed.count !== 1) {
+    const current = await prisma.produceAnchor.findUniqueOrThrow({ where: { produceId } });
+    if (current.status === "confirmed") return { ...publicAnchor(current), verified: true, programId: id.toBase58() };
+    throw Object.assign(new Error("This batch anchor is already being submitted. Refresh the listing shortly."), { status: 409 });
   }
 
-  const account = await rpc.getAccountInfo(expectedAddress, "confirmed");
-  if (!account || !account.owner.equals(id)) {
-    throw Object.assign(new Error("Batch anchor account was not found under the configured program"), { status: 409 });
-  }
-  const data = account.data;
-  const snapshot = anchor.snapshot as unknown as ProduceRecordSnapshot;
+  try {
+    await ensureRegistryConfig(rpc, id, authority);
+  const batchRef = Buffer.from(anchorRecord.batchRef, "hex");
+  const commitment = Buffer.from(anchorRecord.commitment, "hex");
+  const batchAddress = deriveBatchAnchorAddress(anchorRecord.batchRef);
   const currentProduce = await prisma.produce.findUnique({ where: { id: produceId } });
-  const currentSnapshot = currentProduce
+  const expectedSnapshot = currentProduce
     ? makeProduceSnapshot(currentProduce.data as Record<string, any>)
     : null;
-  const calculated = deriveRecordCommitment(snapshot, anchor.batchRef, anchor.salt);
-  if (
-    data.length < 112 ||
-    !data.subarray(0, 8).equals(BATCH_ACCOUNT_DISCRIMINATOR) ||
-    !data.subarray(8, 40).equals(batchRef) ||
-    !data.subarray(40, 72).equals(authority.toBuffer()) ||
-    !data.subarray(80, 112).equals(commitment) ||
-    !calculated.equals(commitment) ||
-    !currentSnapshot ||
-    JSON.stringify(currentSnapshot) !== JSON.stringify(snapshot)
-  ) {
-    throw Object.assign(new Error("On-chain batch account does not match the off-chain produce record"), { status: 409 });
+  if (!expectedSnapshot) throw Object.assign(new Error("Produce listing not found"), { status: 404 });
+  const existingAccount = await rpc.getAccountInfo(batchAddress, "confirmed");
+  if (existingAccount) {
+    const accountData = existingAccount.data;
+    const calculated = deriveRecordCommitment(expectedSnapshot, anchorRecord.batchRef, anchorRecord.salt);
+    if (
+      !existingAccount.owner.equals(id) ||
+      accountData.length < 112 ||
+      !accountData.subarray(0, 8).equals(BATCH_ACCOUNT_DISCRIMINATOR) ||
+      !accountData.subarray(8, 40).equals(batchRef) ||
+      !accountData.subarray(40, 72).equals(authority.publicKey.toBuffer()) ||
+      !accountData.subarray(80, 112).equals(commitment) ||
+      !calculated.equals(commitment)
+    ) {
+      throw Object.assign(new Error("An on-chain account already exists for this batch but does not match the saved record"), { status: 409 });
+    }
+    const [priorSignature] = await rpc.getSignaturesForAddress(batchAddress, { limit: 1 }, "confirmed");
+    const updated = await prisma.produceAnchor.update({
+      where: { produceId },
+      data: { status: "confirmed", txSignature: priorSignature?.signature ?? null, anchorAddress: batchAddress.toBase58() },
+    });
+    return { ...publicAnchor(updated), verified: true, programId: id.toBase58() };
   }
-
-  const updated = await prisma.produceAnchor.update({
-    where: { produceId },
-    data: { status: "confirmed", txSignature: signature, anchorAddress: expectedAddress.toBase58() },
+  const revisionAddress = PublicKey.findProgramAddressSync(
+    [Buffer.from("revision"), batchRef, Buffer.alloc(8)], id,
+  )[0];
+  const instruction = new TransactionInstruction({
+    programId: id,
+    keys: [
+      { pubkey: deriveConfigAddress(id), isSigner: false, isWritable: false },
+      { pubkey: batchAddress, isSigner: false, isWritable: true },
+      { pubkey: revisionAddress, isSigner: false, isWritable: true },
+      { pubkey: authority.publicKey, isSigner: true, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data: Buffer.concat([REGISTER_BATCH_DISCRIMINATOR, batchRef, commitment]),
   });
-  return publicAnchor(updated);
+  const blockhash = await rpc.getLatestBlockhash("confirmed");
+  const versioned = new VersionedTransaction(new TransactionMessage({
+    payerKey: authority.publicKey,
+    recentBlockhash: blockhash.blockhash,
+    instructions: [instruction],
+  }).compileToV0Message());
+  const simulation = await rpc.simulateTransaction(versioned, {
+    sigVerify: false,
+    replaceRecentBlockhash: true,
+    commitment: "confirmed",
+  });
+  if (simulation.value.err) {
+    const details = simulation.value.logs?.slice(-3).join(" ");
+    throw Object.assign(new Error(details || "Solana rejected the batch registration simulation"), { status: 409 });
+  }
+  const transaction = new Transaction({
+    feePayer: authority.publicKey,
+    recentBlockhash: blockhash.blockhash,
+  }).add(instruction);
+  const signature = await sendAndConfirmTransaction(rpc, transaction, [authority], {
+    commitment: "confirmed",
+    preflightCommitment: "confirmed",
+  });
+  const account = await rpc.getAccountInfo(batchAddress, "confirmed");
+  if (!account || !account.owner.equals(id) || account.data.length < 112 ||
+      !account.data.subarray(0, 8).equals(BATCH_ACCOUNT_DISCRIMINATOR) ||
+      !account.data.subarray(8, 40).equals(batchRef) ||
+      !account.data.subarray(40, 72).equals(authority.publicKey.toBuffer()) ||
+      !account.data.subarray(80, 112).equals(commitment)) {
+    throw Object.assign(new Error("Confirmed transaction did not create the expected AgriQora batch account"), { status: 409 });
+  }
+    const updated = await prisma.produceAnchor.update({
+    where: { produceId },
+    data: { status: "confirmed", txSignature: signature, anchorAddress: batchAddress.toBase58() },
+  });
+  return { ...publicAnchor(updated), verified: true, programId: id.toBase58() };
+  } catch (error) {
+    await prisma.produceAnchor.updateMany({
+      where: { produceId, status: "submitting" },
+      data: { status: "pending" },
+    });
+    throw error;
+  }
 }
 
 export async function verifyProduceAnchor(produceId: string) {

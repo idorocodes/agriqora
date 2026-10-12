@@ -1,6 +1,6 @@
 # AgriQora web (frontend)
 
-React + Vite + TypeScript frontend for the AgriQora produce marketplace (Suleja). It talks to the
+React + Vite + TypeScript frontend for the AgriQora produce marketplace. It talks to the
 `agriqora-api` backend and uses the designer's visual style (cream and forest green, Fraunces + Manrope).
 
 ## Status
@@ -41,11 +41,11 @@ Start the backend (`agriqora-api`) first. Its `CORS_ORIGIN` must include this si
 For production set it to your deployed API, for example `https://api.yourdomain.com`, then run
 `npm run build`. Vite reads it at build time, so rebuild after changing it.
 
-For Solana batch anchoring, deploy the Anchor program in `../agriqora-chain`, then set
-`VITE_SOLANA_PROGRAM_ID` and `VITE_SOLANA_RPC_URL` before rebuilding. Farmer wallets use
-Phantom or Solflare on devnet; the farmer reviews the commitment and signs the simulated
-transaction. The API needs matching `SOLANA_PROGRAM_ID` and `SOLANA_RPC_URL` values and the
-`ProduceAnchor` migration applied. Private snapshots and salts stay in PostgreSQL. The admin
+For Solana batch anchoring, the farmer does not need a Solana wallet: the API submits through
+its server-only devnet authority. Configure `SOLANA_PROGRAM_ID`, `SOLANA_RPC_URL`, and
+`SOLANA_AUTHORITY_KEYPAIR_PATH` or secret `SOLANA_AUTHORITY_KEYPAIR` on the API host, and
+apply the `ProduceAnchor` migration. Do not put the signer in web variables. Private
+snapshots and salts stay in PostgreSQL. The admin
 correction UI currently writes only to the platform audit ledger and does not submit on-chain
 revision transactions.
 

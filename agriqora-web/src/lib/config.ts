@@ -1,7 +1,8 @@
 /**
- * Base URL of the AgriQora API (the agriqora-api backend).
- *
- * Empty string = same origin, which is what the Vite dev/preview proxy uses.
- * Set API_URL at build time to point at a deployed server.
+ * Use Vite's local /api proxy in development. Production can override the API
+ * origin at build time; the current Render API remains the deployment fallback.
  */
-export const API_URL: string ="https://agriqora-server.onrender.com"
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+const defaultApiUrl = import.meta.env.DEV ? '' : 'https://agriqora-server.onrender.com';
+
+export const API_URL = (configuredApiUrl || defaultApiUrl).replace(/\/+$/, '');

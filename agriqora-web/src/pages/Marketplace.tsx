@@ -52,7 +52,7 @@ export default function Marketplace() {
     <>
       <section className="border-b border-line bg-sand">
         <div className="wrap py-10 sm:py-14">
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-forest">Suleja produce market</p>
+      
           <h1 className="font-display text-[34px] font-semibold leading-[1.05] tracking-tight text-ink sm:text-5xl sm:leading-none">
             Find what you need, closer to home.
           </h1>

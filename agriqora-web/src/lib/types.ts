@@ -72,7 +72,6 @@ export interface ProduceItem {
     txSignature?: string | null;
     anchorAddress?: string | null;
     cluster: string;
-    programId?: string | null;
     verified?: boolean;
   };
 }

@@ -143,7 +143,7 @@ export default function Learn() {
     <div className="wrap pb-14 pt-10">
       <PageHeader
         title="Learn and connect"
-        subtitle="Simple, practical lessons for farmers, plus market days, trainings and advice from the farming community around Suleja."
+        subtitle="Simple, practical lessons for farmers, plus market days, trainings and advice from the farming community."
       />
       <div className="mt-6">
         <TabBar<Tab>

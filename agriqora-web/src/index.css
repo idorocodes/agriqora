@@ -44,10 +44,12 @@
 
 @layer components {
   .wrap {
-    @apply mx-auto w-full max-w-[1248px] px-4;
+    @apply mx-auto w-full max-w-full;
+    padding-inline: clamp(1rem, 2vw, 2rem);
   }
   .wrap-nav {
-    @apply mx-auto w-full max-w-[1296px] px-4;
+    @apply mx-auto w-full max-w-full;
+    padding-inline: clamp(1rem, 2vw, 2rem);
   }
 
   .btn {

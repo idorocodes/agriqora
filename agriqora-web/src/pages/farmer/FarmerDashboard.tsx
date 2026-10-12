@@ -1,7 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { Bell, ClipboardList, NotebookPen, Sprout, UserRound } from 'lucide-react';
 import { api, errorMessage } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
@@ -11,7 +9,6 @@ import { compressImage } from '../../lib/image';
 import { phonesMatch } from '../../lib/phone';
 import { CATEGORIES, PRODUCE_STATUSES, type BuyerRequest, type ProduceCategory, type ProduceItem, type ProduceStatus, type RequestStatus, type User } from '../../lib/types';
 import { useTitle } from '../../lib/useTitle';
-import { anchorProduceBatch, solanaProgramId, type PreparedAnchor } from '../../lib/solanaAnchor';
 import { NotificationsPanel } from '../../components/NotificationsPanel';
 import { ProduceImage } from '../../components/ProduceImage';
 import { useToast } from '../../components/Toast';
@@ -33,53 +30,17 @@ import {
 type Tab = 'listings' | 'requests' | 'records' | 'profile' | 'notifications';
 const TAB_IDS: Tab[] = ['listings', 'requests', 'records', 'profile', 'notifications'];
 
-function FarmerWalletControl() {
-  const { publicKey, connecting, disconnect } = useWallet();
-  const { setVisible } = useWalletModal();
-  return (
-    <button
-      type="button"
-      className="btn btn-outline"
-      disabled={connecting}
-      onClick={() => publicKey ? void disconnect() : setVisible(true)}
-    >
-      {connecting ? 'Connecting wallet…' : publicKey ? `${publicKey.toBase58().slice(0, 5)}…${publicKey.toBase58().slice(-5)} · Disconnect` : 'Connect Solana wallet'}
-    </button>
-  );
-}
-
 function AnchorProduceControl({ item, onAnchored }: { item: ProduceItem; onAnchored: () => void }) {
-  const { connection } = useConnection();
-  const { publicKey, sendTransaction } = useWallet();
   const toast = useToast();
-  const [prepared, setPrepared] = useState<PreparedAnchor | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const programConfigured = Boolean(solanaProgramId());
-
-  const prepare = async () => {
-    if (!publicKey) return;
-    setBusy(true);
-    setError('');
-    try {
-      const next = await api.prepareProduceAnchor(item.id, publicKey.toBase58());
-      setPrepared(next);
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const submit = async () => {
-    if (!publicKey) return;
     setBusy(true);
     setError('');
     try {
-      const transaction = await anchorProduceBatch(connection, sendTransaction, publicKey, prepared!);
-      await api.confirmProduceAnchor(item.id, transaction.signature);
-      toast('Batch commitment confirmed on Solana devnet');
-      setPrepared(null);
+        await api.anchorProduce(item.id);
+        toast('AgriQora submitted and confirmed the batch on Solana devnet');
       onAnchored();
     } catch (err) {
       setError(errorMessage(err));
@@ -111,33 +72,11 @@ function AnchorProduceControl({ item, onAnchored }: { item: ProduceItem; onAncho
     <div className="mt-4 border-t border-line pt-3">
       <p className="text-sm font-semibold text-ink">Solana batch commitment</p>
       <p className="mt-1 text-xs leading-relaxed text-muted">
-        Devnet transaction. The connected farmer wallet pays the network fee and account rent. Only an opaque batch reference and salted record commitment go on-chain; personal details stay in the database.
+        AgriQora submits this to Solana devnet. The platform pays network fees. Only an opaque batch reference and salted record commitment go on-chain; personal details stay in the database.
       </p>
-      {!programConfigured && <p className="mt-2 text-xs text-warn">The deployed program ID is not configured yet.</p>}
-      {!publicKey ? (
-        <div className="mt-3"><FarmerWalletControl /></div>
-      ) : prepared ? (
-        <div className="mt-3 space-y-2 rounded-md border border-line bg-cream p-3 text-xs">
-          <p><span className="font-semibold">Network:</span> Solana devnet</p>
-          <p className="break-all"><span className="font-semibold">Batch reference:</span> {prepared.batchRef}</p>
-          <p className="break-all"><span className="font-semibold">Record commitment:</span> {prepared.commitment}</p>
-          <p className="break-all"><span className="font-semibold">Fee payer and signer:</span> {publicKey.toBase58()}</p>
-          <p className="break-all"><span className="font-semibold">Account initialized:</span> {prepared.anchorAddress}</p>
-          <div className="flex flex-wrap gap-2 pt-1">
-            <button type="button" className="btn btn-primary btn-sm" disabled={busy || !programConfigured} onClick={() => void submit()}>
-              {busy ? 'Waiting for wallet…' : 'Sign and anchor'}
-            </button>
-            <button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => setPrepared(null)}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button type="button" className="btn btn-outline btn-sm mt-3" disabled={busy || !programConfigured} onClick={() => void prepare()}>
-          {busy ? 'Preparing commitment…' : 'Prepare on-chain record'}
-        </button>
-      )}
-      {publicKey && <div className="mt-2"><FarmerWalletControl /></div>}
+      <button type="button" className="btn btn-outline btn-sm mt-3" disabled={busy} onClick={() => void submit()}>
+        {busy ? 'Submitting to Solana…' : 'Anchor batch on Solana'}
+      </button>
       {error && <InlineMessage kind="error">{error}</InlineMessage>}
     </div>
   );
@@ -319,12 +258,9 @@ function ListingsTab({ user }: { user: User }) {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3">
-        <button type="button" onClick={() => setEditing('new')} className="btn btn-primary">
-          + Add produce
-        </button>
-        <FarmerWalletControl />
-      </div>
+      <button type="button" onClick={() => setEditing('new')} className="btn btn-primary">
+        + Add produce
+      </button>
       {mine.length === 0 ? (
         <EmptyState compact title="No listings yet" text="Post your first produce so buyers can find it." />
       ) : (

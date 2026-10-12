@@ -57,7 +57,7 @@ export async function apiAuthorization(req: Request, res: Response, next: NextFu
   }
   if (req.path.startsWith("/auth/")) { next(); return; }
   const rolesByPath: Array<[RegExp, string[]]> = [
-    [/^\/produce\/[^/]+\/anchor\/(?:prepare|confirm)$/, ["farmer"]],
+    [/^\/produce\/[^/]+\/anchor$/, ["farmer"]],
     [/^\/produce(?:\/[^/]+)?$/, ["farmer", "admin"]],
     [/^\/requests$/, ["buyer", "admin"]],
     [/^\/requests\/[^/]+\/status$/, ["farmer", "admin"]],

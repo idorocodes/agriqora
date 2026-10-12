@@ -88,7 +88,7 @@ describe('registration API', () => {
     await api.listUsers();
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(fetchMock.mock.calls[1][0]).toBe('/api/auth/refresh');
+    expect(String(fetchMock.mock.calls[1][0])).toMatch(/\/api\/auth\/refresh$/);
     expect(fetchMock.mock.calls[2][1].headers).toMatchObject({
       Authorization: 'Bearer new-access',
     });

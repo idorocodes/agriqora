@@ -16,7 +16,6 @@ import type {
   User,
   UserRole,
 } from './types';
-import type { PreparedAnchor } from './solanaAnchor';
 
 export class ApiError extends Error {
   status: number;
@@ -295,17 +294,10 @@ export const api = {
   async deleteProduce(id: string): Promise<void> {
     await call(`/api/produce/${enc(id)}`, { method: 'DELETE' });
   },
-  async prepareProduceAnchor(id: string, walletAddress: string): Promise<PreparedAnchor> {
-    const json = await call<PreparedAnchor>(`/api/produce/${enc(id)}/anchor/prepare`, {
-      method: 'POST',
-      body: { walletAddress },
-    });
-    return json.data as PreparedAnchor;
-  },
-  async confirmProduceAnchor(id: string, signature: string): Promise<NonNullable<ProduceItem['chainAnchor']>> {
+  async anchorProduce(id: string): Promise<NonNullable<ProduceItem['chainAnchor']>> {
     const json = await call<NonNullable<ProduceItem['chainAnchor']>>(
-      `/api/produce/${enc(id)}/anchor/confirm`,
-      { method: 'POST', body: { signature } },
+      `/api/produce/${enc(id)}/anchor`,
+      { method: 'POST', body: {} },
     );
     return json.data as NonNullable<ProduceItem['chainAnchor']>;
   },

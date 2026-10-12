@@ -17,9 +17,6 @@ importers:
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
-      bs58:
-        specifier: ^6.0.0
-        version: 6.0.0
       cors:
         specifier: ^2.8.5
         version: 2.8.6
@@ -373,9 +370,6 @@ packages:
   base-x@3.0.11:
     resolution: {integrity: sha512-xz7wQ8xDhdyP7tQxwdteLYeFfS68tSMNCZ/Y37WJ4bhGfKPpqEIlmIyueQHqOyoPhE6xNUqjzRr8ra0eF9VRvA==}
 
-  base-x@5.0.1:
-    resolution: {integrity: sha512-M7uio8Zt++eg3jPj+rHMfCC+IuygQHHCOU+IYsVtik6FWjuYpVt/+MRKcgsAMHh8mMFAwnB+Bs+mTrFiXjMzKg==}
-
   base64-js@1.5.1:
     resolution: {integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==}
 
@@ -394,9 +388,6 @@ packages:
 
   bs58@4.0.1:
     resolution: {integrity: sha512-Ok3Wdf5vOIlBrgCvTq96gBkJw+JUEzdBgyaza5HLtPm7yTHkjRy8+JzNyHF7BHa0bNWOQIp3m5YF0nnFcOIKLw==}
-
-  bs58@6.0.0:
-    resolution: {integrity: sha512-PD0wEnEYg6ijszw/u8s+iI3H17cTymlrwkKhDhPZq+Sokl3AU4htyBFTjAeNAlCCmg0f53g6ih3jATyCKftTfw==}
 
   buffer-equal-constant-time@1.0.1:
     resolution: {integrity: sha512-zRpUiDwd/xk6ADqPMATG8vc9VPrkck7T07OIx0gnjmJAnHnTVXNQG3vfvWNuiZIkwu9KrKdA1iJKfsfTVxE6NA==}
@@ -1238,8 +1229,6 @@ snapshots:
     dependencies:
       safe-buffer: 5.2.1
 
-  base-x@5.0.1: {}
-
   base64-js@1.5.1: {}
 
   bcryptjs@2.4.3: {}
@@ -1272,10 +1261,6 @@ snapshots:
   bs58@4.0.1:
     dependencies:
       base-x: 3.0.11
-
-  bs58@6.0.0:
-    dependencies:
-      base-x: 5.0.1
 
   buffer-equal-constant-time@1.0.1: {}
 

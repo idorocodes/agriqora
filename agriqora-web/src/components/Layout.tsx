@@ -86,8 +86,8 @@ function Navbar() {
   const dash = user ? dashboardPath(user.role) : '/signin';
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-cream/95 backdrop-blur">
-      <div className="wrap-nav flex h-[72px] items-center justify-between gap-4">
+    <header className="sticky top-0  border-b border-line bg-cream/95 backdrop-blur">
+      <div className="wrap-nav flex h-18 items-center justify-between gap-4">
         <Link to="/" aria-label="AgriQora home" className="rounded-md">
           <Logo />
         </Link>
@@ -195,34 +195,59 @@ function Navbar() {
 }
 
 function Footer() {
+  const { user } = useAuth();
+
   return (
     <footer className="bg-forest text-white">
-      <div className="wrap grid gap-10 py-12 md:grid-cols-[1.4fr_1fr_1fr]">
-        <div>
-          <Logo light />
-          <p className="mt-4 max-w-[380px] text-sm leading-relaxed text-footer-text">
-            Better markets, trusted produce, and practical knowledge for farming communities.
-          </p>
+      <div className="wrap pt-12 sm:pt-14">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-10 border-b border-white/15 pb-10 md:grid-cols-4 md:gap-10 md:pb-12">
+          <div className="col-span-2 md:col-span-1">
+            <Link to="/" aria-label="AgriQora home" className="inline-flex rounded-md">
+              <Logo light />
+            </Link>
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-footer-text">
+              Connecting farming communities with trusted produce markets and practical knowledge.
+            </p>
+          </div>
+
+          <nav aria-label="Marketplace links">
+            <h2 className="text-sm font-semibold text-white">Marketplace</h2>
+            <ul className="mt-4 space-y-3 text-sm text-footer-text">
+              <li><Link to="/" className="transition-colors hover:text-white">Browse produce</Link></li>
+              <li><Link to="/join?role=buyer" className="transition-colors hover:text-white">Join as a buyer</Link></li>
+              <li><Link to="/join?role=farmer" className="transition-colors hover:text-white">Join as a farmer</Link></li>
+            </ul>
+          </nav>
+
+          <nav aria-label="Resources">
+            <h2 className="text-sm font-semibold text-white">Resources</h2>
+            <ul className="mt-4 space-y-3 text-sm text-footer-text">
+              <li><Link to="/learn" className="transition-colors hover:text-white">Farming lessons</Link></li>
+              <li><Link to="/trace" className="transition-colors hover:text-white">Trace a batch</Link></li>
+            </ul>
+          </nav>
+
+          <nav aria-label="Your account">
+            <h2 className="text-sm font-semibold text-white">Your account</h2>
+            <ul className="mt-4 space-y-3 text-sm text-footer-text">
+              {user ? (
+                <>
+                  <li><Link to={dashboardPath(user.role)} className="transition-colors hover:text-white">Dashboard</Link></li>
+                  <li><Link to={`${dashboardPath(user.role)}?tab=notifications`} className="transition-colors hover:text-white">Notifications</Link></li>
+                </>
+              ) : (
+                <>
+                  <li><Link to="/signin" className="transition-colors hover:text-white">Sign in</Link></li>
+                  <li><Link to="/join" className="transition-colors hover:text-white">Create an account</Link></li>
+                </>
+              )}
+            </ul>
+          </nav>
         </div>
-        <div>
-          <h2 className="text-base font-medium">Explore</h2>
-          <ul className="mt-3 space-y-2 text-sm text-footer-text">
-            <li>
-              <Link to="/" className="hover:text-white">
-                Buy produce
-              </Link>
-            </li>
-            <li>
-              <Link to="/learn" className="hover:text-white">
-                Farming lessons
-              </Link>
-            </li>
-            <li>
-              <Link to="/trace" className="hover:text-white">
-                Verify a batch
-              </Link>
-            </li>
-          </ul>
+
+        <div className="flex flex-col gap-2 py-5 text-xs text-footer-text sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} AgriQora</p>
+          <p>Better farm-to-market connections.</p>
         </div>
       </div>
     </footer>
